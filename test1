@@ -1,0 +1,28 @@
+import subprocess
+
+# Define the shell script as a multi-line string
+shell_script = """
+echo "/npd/staging/LEAPFROG/PRD/TOOL/.HLXPASS"
+export DOTMONETDBFILE="SHLXPASS"
+mclient -h lnx2576.ch3.prod.i.com -d DB_HLX_MRT_AUT_ECM_PA -p 50015 -3 "select 1"
+"""
+
+# Execute the shell script
+process = subprocess.Popen(shell_script, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+# Capture the output and error (if any)
+stdout, stderr = process.communicate()
+
+# Decode the output and error
+stdout_decoded = stdout.decode()
+stderr_decoded = stderr.decode()
+
+# Print the output and error (if any)
+print("Output:\n", stdout_decoded)
+print("Error:\n", stderr_decoded)
+
+# Check if the output contains the expected result
+if '1' in stdout_decoded:
+    print("DB is up and running")
+else:
+    print("Failed to connect to the DB or the query did not return the expected result")
