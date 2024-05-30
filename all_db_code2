@@ -1,0 +1,84 @@
+import subprocess
+import smtplib
+import logging
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from databases import databases  # Import the list of databases
+
+# Email configuration
+MAIL_TO = "darshan@infi.com"
+MAIL_FROM = "airflow@infi.com"
+MAIL_SMTP_SERVER = "smtpna.infi.com"
+MAIL_FORMAT = "plain"
+duplicate_row = """Hi team,
+empty file check : Pass
+file present check : Pass
+duplicate between previous file and current file is : """
+
+# Function to send email
+def send_mail(subject, text, to_address=MAIL_TO, from_address=MAIL_FROM, smtp_server=MAIL_SMTP_SERVER, format=MAIL_FORMAT, attachment=None, RaiseError=False):
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = from_address
+        msg['To'] = to_address
+        msg['Subject'] = subject
+
+        if attachment:
+            part = MIMEBase('application', "octet-stream")
+            part.set_payload(attachment)
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', 'attachment', filename="difference.txt")
+            msg.attach(part)
+
+        msg.attach(MIMEText(text, format))
+        text = msg.as_string()
+
+        server = smtplib.SMTP(smtp_server)
+        server.sendmail(from_address, to_address, text)
+        server.quit()  # Close the connection explicitly
+        print("Email sent successfully")
+    except smtplib.SMTPException as e:
+        logging.warning("Can't send status email. Check smtp settings: {}".format(str(e).replace('\n', '')))
+        if RaiseError:
+            raise e
+    except Exception as e:
+        logging.warning("An error occurred: {}".format(str(e).replace('\n', '')))
+        if RaiseError:
+            raise e
+
+# Iterate over each database and check its status
+for db_params in databases:
+    # Define the shell script for the current database
+    shell_script = """
+    echo "/npd/staging/LEAPFROG/PRD/TOOL/.HLXPASS"
+    export DOTMONETDBFILE="SHLXPASS"
+    mclient -h {host} -d {db} -p {port} -3 "select 1"
+    """.format(**db_params)
+
+    # Execute the shell script
+    process = subprocess.Popen(shell_script, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+    # Capture the output and error (if any)
+    stdout, stderr = process.communicate()
+
+    # Decode the output and error (if any)
+    stdout_decoded = stdout.decode('utf-8')
+    stderr_decoded = stderr.decode('utf-8')
+
+    # Print the output and error (if any)
+    print("Output:\n{}".format(stdout_decoded))
+    print("Error:\n{}".format(stderr_decoded))
+
+    # Check if the output contains the expected result
+    if '1' in stdout_decoded:
+        print("DB {} is up and running".format(db_params["db"]))
+        # Prepare the email body
+        email_body_one = "Database {} is up and running".format(db_params["db"])
+        send_mail(subject="Database Status: Up and Running", text=email_body_one)
+    else:
+        print("Failed to connect to DB {} or the query did not return the expected result".format(db_params["db"]))
+        # Prepare the email body for failure
+        email_body = "Failed to connect to DB {} or the query did not return the expected result".format(db_params["db"])
+        send_mail(subject="Database Status: Connection Failed", text=email_body)
