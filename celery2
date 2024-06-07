@@ -1,0 +1,40 @@
+Transition Plan: From Local Executor to Celery Executor in Airflow
+Current Setup and Testing:
+
+Local Executor: Airflow has been configured to use the Local Executor.
+Startup via systemctl: Airflow services are managed and started using systemctl.
+Testing: Multiple DAGs have been tested, and Airflow is working fine in this setup.
+Planned Transition to Celery Executor:
+
+Celery Executor: We plan to transition to the Celery Executor for better scalability and distribution.
+Message Broker: Redis will be used as the message broker to manage task queues.
+Monitoring Tool: Flower will be employed to monitor the Celery workers and tasks.
+Initial Issues and Rectification:
+
+Connection Errors: During the initial setup of the Celery Executor with Redis, connection errors have been encountered.
+Resolution: These errors are being actively addressed and rectified to ensure a stable setup.
+Testing Celery Executor:
+
+Comprehensive Testing: Once the connection issues are resolved, we will conduct thorough testing of the Celery Executor to ensure it works as expected.
+DAG Migration Plan:
+
+Source Server (2333): Current DAGs are hosted on the server with IP 2333.
+Destination Server (2444): DAGs will be migrated to the new server with IP 2444.
+Pre-Migration Checks:
+Script Paths: Verify that all script paths are correctly configured on the new server.
+Necessary Configurations: Ensure all required configurations and dependencies are in place.
+Communication:
+
+Email Alerts: Proper email alerts will be sent to all relevant stakeholders before the migration begins to inform them of the planned changes.
+Migration Execution:
+
+DAG Migration: Migrate the DAGs from the 2333 server to the 2444 server.
+Starting New Airflow Instance: Launch the new Airflow instance on the 2444 server.
+Production Designation:
+
+New Production Environment: The new Airflow setup on the 2444 server will be considered the production environment after the migration is successfully completed.
+
+
+
+
+
