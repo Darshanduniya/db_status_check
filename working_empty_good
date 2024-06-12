@@ -1,0 +1,25 @@
+# Define the path to the file
+file_path = '/data/duni/duenu_file.dat'
+
+# Read the file and store its lines
+with open(file_path, 'r') as file:
+    lines = file.readlines()
+
+# Count the number of empty lines at the end
+empty_lines_at_end = 0
+for line in reversed(lines):
+    if line.strip() == '':
+        empty_lines_at_end += 1
+    else:
+        break
+
+# Output the number of empty lines at the end
+print(f'Number of empty lines at the end: {empty_lines_at_end}')
+
+# If there is exactly one or two empty lines at the end, remove one
+if empty_lines_at_end == 1 or empty_lines_at_end == 2:
+    lines.pop()
+
+# Write the modified lines back to the file
+with open(file_path, 'w') as file:
+    file.writelines(lines)
