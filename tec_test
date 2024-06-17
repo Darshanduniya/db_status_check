@@ -1,0 +1,13 @@
+# Define the path to the file
+file_path = '/data/duni/darshan.dat'
+
+# Open the file and read its contents
+with open(file_path, 'r') as file:
+    lines = file.readlines()
+
+# Iterate over each line and extract the value before the first %
+for line in lines:
+    # Split the line at the first % and take the first part
+    value = line.split('%')[0]
+    # Print the extracted value
+    print(value)
