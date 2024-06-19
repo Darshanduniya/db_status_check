@@ -1,0 +1,23 @@
+import subprocess
+
+HIVE_SCHEMA = "prd_us_npd_pos_tkd_ust"
+
+# Constructing the Hive query string
+hive_query = 'set hive.execution.engine=tez; ' \
+             'select count(*) from {0}.fact_base_incrs'.format(HIVE_SCHEMA)
+
+# Using subprocess to execute the Hive command
+try:
+    # Execute the Hive command and capture output
+    process = subprocess.Popen(['hive', '-e', hive_query], stdout=subprocess.PIPE)
+    output, error = process.communicate()
+
+    # Decode output from bytes to string (Python 2.7 compatible)
+    output = output.decode('utf-8').strip()
+
+    # Print or use the output as needed
+    print("Hive query output:")
+    print(output)
+
+except subprocess.CalledProcessError as e:
+    print("Error executing Hive query:", e)
