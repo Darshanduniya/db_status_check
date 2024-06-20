@@ -1,0 +1,121 @@
+from datetime import datetime, timedelta
+from airflow import DAG
+from airflow.operators.python import PythonOperator
+from airflow.operators.dummy import DummyOperator
+import subprocess
+import pymonetdb
+
+default_args = {
+    'owner': 'airflow',
+    'depends_on_past': False,
+    'start_date': datetime(2024, 1, 1),
+    'email_on_failure': False,
+    'email_on_retry': False,
+    'retries': 1,
+    'retry_delay': timedelta(minutes=5),
+}
+
+def execute_hive_query(**kwargs):
+    HIVE_SCHEMA = "prd_us_npd_pos_tkd_ust"
+
+    # Constructing the Hive query string
+    hive_query = f'set hive.execution.engine=tez; select count(*) from {HIVE_SCHEMA}.fact_base_incrs'
+
+    try:
+        # Execute the Hive command and capture output
+        process = subprocess.Popen(['hive', '-e', hive_query], stdout=subprocess.PIPE)
+        output, error = process.communicate()
+
+        # Decode output from bytes to string
+        output = output.decode('utf-8').strip()
+
+        # Convert the output to an integer
+        count = int(output)
+
+        # Push the count to XCom
+        kwargs['ti'].xcom_push(key='hive_count', value=count)
+
+        print("Count of records:", count)
+        return count
+
+    except subprocess.CalledProcessError as e:
+        print("Error executing Hive query:", e)
+    except ValueError as e:
+        print("Error converting output to integer:", e)
+
+def execute_monet_query(**kwargs):
+    # Pull the count from XCom
+    hive_count = kwargs['ti'].xcom_pull(key='hive_count', task_ids='task1')
+
+    # Only execute this task if hive_count > 0
+    if hive_count > 0:
+        # Define connection parameters
+        hostname = 'your_hostname'
+        port = 50000  # Default MonetDB port
+        username = 'your_username'
+        password = 'your_password'
+        database = 'your_database_name'
+
+        # Create a connection object
+        connection = pymonetdb.connect(
+            username=username,
+            password=password,
+            hostname=hostname,
+            port=port,
+            database=database
+        )
+
+        # Create a cursor object using the connection
+        cursor = connection.cursor()
+
+        # Define your SQL query
+        query = "SELECT * FROM your_table LIMIT 10;"
+
+        # Execute the query
+        cursor.execute(query)
+
+        # Fetch the results
+        results = cursor.fetchall()
+
+        # Print the results
+        for row in results:
+            print(row)
+
+        # Close the cursor and connection
+        cursor.close()
+        connection.close()
+    else:
+        print("Hive count is 0, skipping MonetDB query.")
+
+with DAG(
+    'example_dag',
+    default_args=default_args,
+    description='A simple tutorial DAG',
+    schedule_interval=timedelta(days=1),
+) as dag:
+
+    task0 = DummyOperator(
+        task_id='task0',
+    )
+
+    task1 = PythonOperator(
+        task_id='task1',
+        python_callable=execute_hive_query,
+        provide_context=True,
+    )
+
+    task2 = PythonOperator(
+        task_id='task2',
+        python_callable=execute_monet_query,
+        provide_context=True,
+    )
+
+    task3 = DummyOperator(
+        task_id='task3',
+    )
+
+    task4 = DummyOperator(
+        task_id='task4',
+    )
+
+    task0 >> task1 >> task2 >> task3 >> task4
